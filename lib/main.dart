@@ -11,12 +11,14 @@ void main() {
 }
 
 class SkullKingApp extends StatelessWidget {
-  const SkullKingApp({super.key});
+  final GameStorage? storage;
+
+  const SkullKingApp({super.key, this.storage});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => GameController(StorageService())..init(),
+      create: (_) => GameController(storage ?? StorageService())..init(),
       child: MaterialApp(
         title: 'Skull King — Score',
         debugShowCheckedModeBanner: false,

@@ -11,11 +11,25 @@ void main() {
       expect(r.total, 60);
     });
 
-    test('raté : −10 × |plis−enchère|, pas de bonus', () {
+    test('raté : −10 × écart, bonus quand même par défaut', () {
       final r = ScoringEngine.score(
         bid: 4,
         tricks: 2,
         roundCards: 7,
+        bonuses: const RoundBonuses(colorFourteens: 2, blackFourteens: 1),
+      );
+      expect(r.exact, isFalse);
+      expect(r.bidScore, -20);
+      expect(r.bonusScore, 40);
+      expect(r.total, 20);
+    });
+
+    test('raté sans bonus si classicBonusGate', () {
+      final r = ScoringEngine.score(
+        bid: 4,
+        tricks: 2,
+        roundCards: 7,
+        classicBonusGate: true,
         bonuses: const RoundBonuses(colorFourteens: 2, blackFourteens: 1),
       );
       expect(r.exact, isFalse);
@@ -35,8 +49,8 @@ void main() {
       );
     });
 
-    test('bonus Halcyon + butin uniquement si exact', () {
-      final bonuses = const RoundBonuses(
+    test('bonus Halcyon + butin : exact, et aussi si raté par défaut', () {
+      const bonuses = RoundBonuses(
         colorFourteens: 2,
         blackFourteens: 1,
         mermaidByPirate: 1,
@@ -61,7 +75,50 @@ void main() {
         roundCards: 3,
         bonuses: bonuses,
       );
-      expect(miss.bonusScore, 0);
+      expect(miss.bonusScore, 150);
+      expect(miss.bidScore, -10);
+
+      final classicMiss = ScoringEngine.score(
+        bid: 1,
+        tricks: 0,
+        roundCards: 3,
+        bonuses: bonuses,
+        classicBonusGate: true,
+      );
+      expect(classicMiss.bonusScore, 0);
+    });
+
+    test('bonus awarded on missed bid when classicBonusGate is false', () {
+      final r = ScoringEngine.score(
+        bid: 3,
+        tricks: 1,
+        roundCards: 6,
+        classicBonusGate: false,
+        bonuses: const RoundBonuses(
+          colorFourteens: 1,
+          blackFourteens: 1,
+          mermaidByPirate: 1,
+          pirateBySkullKing: 1,
+          skullKingByMermaid: 1,
+          lootAlliances: 1,
+        ),
+      );
+      expect(r.exact, isFalse);
+      expect(r.bidScore, -20);
+      expect(r.bonusScore, 10 + 20 + 20 + 30 + 40 + 20);
+      expect(r.total, r.bidScore + r.bonusScore);
+    });
+
+    test('bonus désactivés : captures à 0, butin conservé', () {
+      final r = ScoringEngine.score(
+        bid: 1,
+        tricks: 0,
+        roundCards: 4,
+        bonusesEnabled: false,
+        bonuses: const RoundBonuses(colorFourteens: 2, lootAlliances: 1),
+        classicBonusGate: false,
+      );
+      expect(r.bonusScore, 20);
     });
   });
 
@@ -86,6 +143,19 @@ void main() {
       expect(r.rascalWagerScore, -10);
       expect(r.total, -10 + -10);
     });
+    test('le pari reste perdu si la mise est ratée, même sans gate', () {
+      final r = ScoringEngine.score(
+        bid: 2,
+        tricks: 0,
+        roundCards: 5,
+        rascalWager: 20,
+        classicBonusGate: false,
+        bonuses: const RoundBonuses(colorFourteens: 1),
+      );
+      expect(r.bonusScore, 10);
+      expect(r.rascalWagerScore, -20);
+      expect(r.total, -20 + 10 - 20);
+    });
     test('wager invalide', () {
       expect(
         () => ScoringEngine.score(
@@ -95,6 +165,165 @@ void main() {
           rascalWager: 15,
         ),
         throwsArgumentError,
+      );
+    });
+  });
+
+  group('Score Rascal et boulet', () {
+    test('coup direct, frappe, échec', () {
+      expect(
+        ScoringEngine.score(
+          bid: 0,
+          tricks: 0,
+          roundCards: 5,
+          scoring: ScoringSystem.rascal,
+        ).bidScore,
+        50,
+      );
+      expect(
+        ScoringEngine.score(
+          bid: 3,
+          tricks: 2,
+          roundCards: 6,
+          scoring: ScoringSystem.rascal,
+        ).bidScore,
+        30,
+      );
+      expect(
+        ScoringEngine.score(
+          bid: 1,
+          tricks: 4,
+          roundCards: 6,
+          scoring: ScoringSystem.rascal,
+        ).bidScore,
+        0,
+      );
+    });
+
+    test('moitié des bonus si écart 1 et gate classique', () {
+      final r = ScoringEngine.score(
+        bid: 2,
+        tricks: 1,
+        roundCards: 4,
+        scoring: ScoringSystem.rascal,
+        classicBonusGate: true,
+        bonuses: const RoundBonuses(colorFourteens: 1, blackFourteens: 1),
+      );
+      expect(r.bidScore, 20);
+      expect(r.bonusScore, 15);
+    });
+
+    test('bonus complets sur un échec Rascal si gate ouverte', () {
+      final r = ScoringEngine.score(
+        bid: 0,
+        tricks: 3,
+        roundCards: 5,
+        scoring: ScoringSystem.rascal,
+        classicBonusGate: false,
+        bonuses: const RoundBonuses(skullKingByMermaid: 1),
+      );
+      expect(r.bidScore, 0);
+      expect(r.bonusScore, 40);
+    });
+
+    test('boulet de canon : 15 × cartes ou 0', () {
+      final hit = ScoringEngine.score(
+        bid: 3,
+        tricks: 3,
+        roundCards: 6,
+        scoring: ScoringSystem.rascal,
+        cannonball: true,
+      );
+      expect(hit.bidScore, 90);
+
+      final miss = ScoringEngine.score(
+        bid: 3,
+        tricks: 2,
+        roundCards: 6,
+        scoring: ScoringSystem.rascal,
+        cannonball: true,
+        classicBonusGate: true,
+        bonuses: const RoundBonuses(colorFourteens: 1),
+      );
+      expect(miss.bidScore, 0);
+      expect(miss.bonusScore, 0);
+
+      final missHouse = ScoringEngine.score(
+        bid: 3,
+        tricks: 2,
+        roundCards: 6,
+        scoring: ScoringSystem.rascal,
+        cannonball: true,
+        classicBonusGate: false,
+        bonuses: const RoundBonuses(colorFourteens: 1),
+      );
+      expect(missHouse.bonusScore, 10);
+    });
+
+    test('butin non réduit de moitié en Rascal classique', () {
+      final r = ScoringEngine.score(
+        bid: 2,
+        tricks: 2,
+        roundCards: 4,
+        scoring: ScoringSystem.rascal,
+        classicBonusGate: true,
+        bonuses: const RoundBonuses(colorFourteens: 1, lootAlliances: 1),
+      );
+      expect(r.bonusScore, 10 + 20);
+    });
+  });
+
+  group('extensions chiffrées', () {
+    test('7, 8, Davy Jones, Con', () {
+      const b = RoundBonuses(
+        eights: 2,
+        sevens: 1,
+        davyJonesSeaMonsters: 1,
+        conCaptured: 1,
+      );
+      expect(b.captureAndCardPoints, 10 - 5 + 20 + 30);
+      final miss = ScoringEngine.score(
+        bid: 2,
+        tricks: 0,
+        roundCards: 4,
+        bonuses: b,
+        classicBonusGate: false,
+      );
+      expect(miss.bonusScore, b.captureAndCardPoints);
+    });
+  });
+
+  group('alliances Butin', () {
+    test('maison : compte même si les deux ratent', () {
+      expect(
+        ScoringEngine.lootSharesForPlayer(
+          playerId: 'a',
+          alliances: const [LootAlliance(playerA: 'a', playerB: 'b')],
+          isExact: (_) => false,
+          classicBonusGate: false,
+        ),
+        1,
+      );
+    });
+
+    test('classique : les deux doivent être exacts', () {
+      expect(
+        ScoringEngine.lootSharesForPlayer(
+          playerId: 'a',
+          alliances: const [LootAlliance(playerA: 'a', playerB: 'b')],
+          isExact: (id) => id == 'a',
+          classicBonusGate: true,
+        ),
+        0,
+      );
+      expect(
+        ScoringEngine.lootSharesForPlayer(
+          playerId: 'b',
+          alliances: const [LootAlliance(playerA: 'a', playerB: 'b')],
+          isExact: (id) => id == 'a' || id == 'b',
+          classicBonusGate: true,
+        ),
+        1,
       );
     });
   });
@@ -113,6 +342,12 @@ void main() {
         isFalse,
       );
     });
+    test('Barbe Grise', () {
+      expect(
+        ScoringEngine.validateTricksSum([1, 0], 3, ghostTricks: 2),
+        isTrue,
+      );
+    });
   });
 
   group('Harry le Géant', () {
@@ -124,7 +359,7 @@ void main() {
     });
   });
 
-  group('Kraken / Baleine clash', () {
+  group('Kraken / Baleine / Raie', () {
     test('kraken seul', () {
       expect(
         ScoringEngine.resolveSeaMonsterClash(
@@ -163,6 +398,25 @@ void main() {
         SeaMonsterOutcome.whaleHighestNumber,
       );
     });
+    test('raie seule et 2e = raie', () {
+      expect(
+        ScoringEngine.resolveSeaMonsterClash(
+          krakenPresent: false,
+          whalePresent: false,
+          stingrayPresent: true,
+        ),
+        SeaMonsterOutcome.stingrayLowestNumber,
+      );
+      expect(
+        ScoringEngine.resolveSeaMonsterClash(
+          krakenPresent: true,
+          whalePresent: true,
+          stingrayPresent: true,
+          secondPlayed: 'stingray',
+        ),
+        SeaMonsterOutcome.stingrayLowestNumber,
+      );
+    });
   });
 
   group('séquences de modes', () {
@@ -191,7 +445,8 @@ void main() {
       expect(buildRoundSequence(GameMode.skipToBrawl), [6, 7, 8, 9, 10]);
     });
     test('custom', () {
-      expect(buildRoundSequence(GameMode.custom, custom: [3, 5, 7]), [3, 5, 7]);
+      expect(
+          buildRoundSequence(GameMode.custom, custom: [3, 5, 7]), [3, 5, 7]);
     });
     test('tous playable', () {
       for (final m in GameMode.values) {

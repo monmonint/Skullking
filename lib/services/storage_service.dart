@@ -2,27 +2,41 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/game_models.dart';
 
-class StorageService {
+abstract class GameStorage {
+  Future<List<String>> loadLastPlayerNames();
+  Future<void> saveLastPlayerNames(List<String> names);
+  Future<void> saveActiveGame(GameState game);
+  Future<GameState?> loadActiveGame();
+  Future<void> clearActiveGame();
+  Future<List<GameState>> loadHistory();
+  Future<void> archiveGame(GameState game);
+}
+
+class StorageService implements GameStorage {
   static const _historyKey = 'game_history_v1';
   static const _lastPlayersKey = 'last_players_v1';
   static const _activeGameKey = 'active_game_v1';
   static const _maxHistory = 30;
 
+  @override
   Future<List<String>> loadLastPlayerNames() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_lastPlayersKey) ?? [];
   }
 
+  @override
   Future<void> saveLastPlayerNames(List<String> names) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_lastPlayersKey, names);
   }
 
+  @override
   Future<void> saveActiveGame(GameState game) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_activeGameKey, jsonEncode(game.toJson()));
   }
 
+  @override
   Future<GameState?> loadActiveGame() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_activeGameKey);
@@ -34,11 +48,13 @@ class StorageService {
     }
   }
 
+  @override
   Future<void> clearActiveGame() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_activeGameKey);
   }
 
+  @override
   Future<List<GameState>> loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_historyKey);
@@ -53,6 +69,7 @@ class StorageService {
     }
   }
 
+  @override
   Future<void> archiveGame(GameState game) async {
     final prefs = await SharedPreferences.getInstance();
     final history = await loadHistory();
