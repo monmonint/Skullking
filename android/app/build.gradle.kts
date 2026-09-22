@@ -11,12 +11,12 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -35,6 +35,21 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    // `flutter build apk --android-project-arg=onlyArm64=true` drops other ABI
+    // native libs that plugins still ship (otherwise a 32-bit phone could
+    // install an APK that has no Flutter engine for that ABI).
+    if (project.findProperty("onlyArm64") == "true") {
+        packaging {
+            jniLibs {
+                excludes += setOf(
+                    "lib/armeabi-v7a/**",
+                    "lib/x86/**",
+                    "lib/x86_64/**",
+                )
+            }
         }
     }
 }

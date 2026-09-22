@@ -65,8 +65,10 @@ Produits :
 
 | Fichier | Contenu |
 |---------|---------|
-| `artifacts/skull-king-scorekeeper-arm64-release.apk` | arm64-v8a seul (téléphones récents, cible &lt; 25 Mo) |
+| `artifacts/skull-king-scorekeeper-arm64-release.apk` | arm64-v8a seul (~18 Mo, sous 25 Mo) |
 | `artifacts/skull-king-scorekeeper.apk` | même binaire arm64, nom court |
-| `artifacts/skull-king-scorekeeper-fat-release.apk` | multi-ABI (armeabi-v7a, arm64-v8a, x86_64) |
+| `artifacts/skull-king-scorekeeper-fat-release.apk` | multi-ABI armeabi-v7a + arm64-v8a + x86_64 (~50 Mo) |
+
+Le wrapper Gradle est en 8.14.3, AGP 8.11.1, Kotlin 2.2.20 (minimum accepté par Flutter 3.47). Flutter affiche un avertissement : ces versions seront un jour trop anciennes ; ne pas passer à AGP 9 tant que le plugin Flutter ne le supporte pas.
 
 Si cette machine n’a pas le SDK Flutter / Android, les tests et le code restent la source de vérité ; lancez les commandes ci-dessus sur un poste où `flutter doctor` est vert. Voir `INSTALL_FR.md`.

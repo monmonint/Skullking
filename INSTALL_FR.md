@@ -11,8 +11,8 @@ Aucune affiliation avec ScoreNow, Grand Prix Games ou Grandpa Beck’s Games.
 
 | Fichier | Pour qui |
 |---------|----------|
-| `skull-king-scorekeeper-arm64-release.apk` (ou `skull-king-scorekeeper.apk`) | Téléphones 64 bits récents. Cible sous 25 Mo. |
-| `skull-king-scorekeeper-fat-release.apk` | Couverture plus large (32 bits ARM, 64 bits, x86_64). Plus lourd. |
+| `skull-king-scorekeeper-arm64-release.apk` (ou `skull-king-scorekeeper.apk`) | Téléphones 64 bits récents. Environ 18 Mo. |
+| `skull-king-scorekeeper-fat-release.apk` | 32 bits ARM, 64 bits et x86_64. Environ 50 Mo. |
 
 Non destiné au Play Store. Identifiant : `fr.remi.skullkingscore`.
 

@@ -10,7 +10,8 @@ fi
 
 flutter pub get
 flutter test
-flutter build apk --release --target-platform android-arm64
+flutter build apk --release --target-platform android-arm64 \
+  --android-project-arg=onlyArm64=true
 
 mkdir -p artifacts
 cp -f build/app/outputs/flutter-apk/app-release.apk \
