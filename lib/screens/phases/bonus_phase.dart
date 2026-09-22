@@ -4,6 +4,7 @@ import '../../scoring/scoring_engine.dart';
 import '../../services/game_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/big_counter.dart';
+import '../../widgets/player_face.dart';
 
 class BonusPhase extends StatefulWidget {
   final GameController ctrl;
@@ -17,6 +18,7 @@ class BonusPhase extends StatefulWidget {
 class _BonusPhaseState extends State<BonusPhase> {
   String? _allyA;
   String? _allyB;
+  String? _selected;
 
   GameController get ctrl => widget.ctrl;
   GameState get game => widget.game;
@@ -24,6 +26,7 @@ class _BonusPhaseState extends State<BonusPhase> {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      key: const Key('bonus-list'),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       children: [
         Text(
@@ -38,20 +41,18 @@ class _BonusPhaseState extends State<BonusPhase> {
             style: TextStyle(color: AppTheme.accent, fontSize: 13, height: 1.35),
           ),
         ],
+        const SizedBox(height: 10),
+        _playerPicker(),
         if (game.expansions.rascalWager) ...[
-          const SizedBox(height: 14),
-          const Text('Pari Rascal',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 12),
+          _sectionTitle('Pari Rascal'),
           const SizedBox(height: 4),
           const Text(
             '0 / 10 / 20. Gagné seulement si la mise est exacte, perdu sinon.',
             style: TextStyle(color: AppTheme.muted, fontSize: 12),
           ),
           const SizedBox(height: 8),
-          for (final p in game.players) ...[
-            _wagerCard(p),
-            const SizedBox(height: 8),
-          ],
+          _wagerCard(_selectedPlayer),
         ],
         if (game.expansions.loot) ...[
           const SizedBox(height: 8),
@@ -59,23 +60,18 @@ class _BonusPhaseState extends State<BonusPhase> {
         ],
         if (_showCaptures) ...[
           const SizedBox(height: 8),
-          const Text('Bonus de cartes et captures',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 8),
-          if (_eligiblePlayers.isEmpty)
+          if (!_eligible(_selectedPlayer))
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'Personne n\'est éligible : en mode classique, les bonus '
+                'Ce joueur n\'est pas éligible : en mode classique, les bonus '
                 'de capture demandent une enchère exacte'
                 ' (ou un écart de 1 en Rascal chevrotine).',
                 style: TextStyle(color: AppTheme.muted),
               ),
-            ),
-          for (final p in _eligiblePlayers) ...[
-            _captureCard(p),
-            const SizedBox(height: 10),
-          ],
+            )
+          else
+            _captureCard(_selectedPlayer),
         ],
       ],
     );
@@ -94,9 +90,62 @@ class _BonusPhaseState extends State<BonusPhase> {
 
   bool get _showCaptures => game.bonusesEnabled;
 
-  List<Player> get _eligiblePlayers {
-    if (!game.bonusesEnabled) return const [];
-    return game.players.where(_eligible).toList();
+  Player get _selectedPlayer {
+    for (final p in game.players) {
+      if (p.id == _selected) return p;
+    }
+    return game.players.first;
+  }
+
+  Widget _playerPicker() {
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: game.players.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final p = game.players[i];
+          final on = p.id == _selectedPlayer.id;
+          return Material(
+            color: on ? AppTheme.accent : AppTheme.surface2,
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(22),
+              onTap: () => setState(() => _selected = p.id),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    PlayerFace(name: p.name, index: i, size: 26),
+                    const SizedBox(width: 8),
+                    Text(
+                      p.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: on ? AppTheme.ink : AppTheme.text,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
+        letterSpacing: 0.6,
+        color: AppTheme.accent,
+      ),
+    );
   }
 
   bool _eligible(Player p) {
@@ -267,13 +316,16 @@ class _BonusPhaseState extends State<BonusPhase> {
             Text(p.name,
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             Text(note, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
+            _sectionTitle('CARTES 14'),
             _row('14 couleur (+10)', b.colorFourteens, 'bonus-${p.id}-color', (v) {
               ctrl.setBonuses(p.id, b.copyWith(colorFourteens: v));
             }),
             _row('14 noir (+20)', b.blackFourteens, 'bonus-${p.id}-black', (v) {
               ctrl.setBonuses(p.id, b.copyWith(blackFourteens: v));
             }),
+            const SizedBox(height: 8),
+            _sectionTitle('CAPTURES'),
             _row('Sirène par pirate (+20)', b.mermaidByPirate, 'bonus-${p.id}-mermaid',
                 (v) {
               ctrl.setBonuses(p.id, b.copyWith(mermaidByPirate: v));
@@ -286,6 +338,12 @@ class _BonusPhaseState extends State<BonusPhase> {
                 'bonus-${p.id}-sk', (v) {
               ctrl.setBonuses(p.id, b.copyWith(skullKingByMermaid: v));
             }),
+            if (game.expansions.bonusSevensEights ||
+                game.expansions.davyJones ||
+                game.expansions.con) ...[
+              const SizedBox(height: 8),
+              _sectionTitle('EXTENSION'),
+            ],
             if (game.expansions.bonusSevensEights) ...[
               _row('8 d\'extension (+5)', b.eights, 'bonus-${p.id}-eight', (v) {
                 ctrl.setBonuses(p.id, b.copyWith(eights: v));
@@ -311,17 +369,17 @@ class _BonusPhaseState extends State<BonusPhase> {
 
   Widget _row(String label, int value, String id, ValueChanged<int> onChanged) {
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 13)),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
           BigCounter(
             id: id,
             value: value,
             min: 0,
             max: 10,
             compact: true,
+            inline: true,
             onChanged: onChanged,
           ),
         ],

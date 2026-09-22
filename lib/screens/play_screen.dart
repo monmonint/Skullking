@@ -57,36 +57,41 @@ class PlayScreen extends StatelessWidget {
         children: [
           LeaderboardStrip(game: g),
           const SizedBox(height: 8),
-          PhaseChips(
-            phases: visiblePhases(g),
-            current: ctrl.phase,
-            onTap: ctrl.phase == RoundPhase.review ? null : ctrl.goToPhase,
-          ),
-          const SizedBox(height: 8),
           Expanded(child: _phase(ctrl, g)),
         ],
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (_canBack(ctrl)) ...[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: ctrl.goBack,
-                    child: const Text('Retour'),
+              PhaseChips(
+                phases: visiblePhases(g),
+                current: ctrl.phase,
+                onTap: ctrl.phase == RoundPhase.review ? null : ctrl.goToPhase,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (_canBack(ctrl)) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: ctrl.goBack,
+                        child: const Text('Retour'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      key: const Key('play-next'),
+                      onPressed: () => _onPrimary(context, ctrl, g),
+                      child: Text(_primaryLabel(ctrl, g)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  key: const Key('play-next'),
-                  onPressed: () => _onPrimary(context, ctrl, g),
-                  child: Text(_primaryLabel(ctrl, g)),
-                ),
+                ],
               ),
             ],
           ),

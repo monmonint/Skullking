@@ -4,6 +4,7 @@ import '../../scoring/scoring_engine.dart';
 import '../../services/game_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/big_counter.dart';
+import '../../widgets/player_face.dart';
 
 class TricksPhase extends StatelessWidget {
   final GameController ctrl;
@@ -25,16 +26,16 @@ class TricksPhase extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       children: [
         Text(
-          monsters || game.expansions.graybeard
-              ? 'Plis $sum'
-                  '${monsters ? ' + annulés $voided' : ''}'
-                  '${game.expansions.graybeard ? ' + Barbe Grise $ghost' : ''}'
-                  ' / ${game.currentCards}'
-              : 'Plis remportés — $sum / ${game.currentCards}',
+          'Plis $total / ${game.currentCards}',
           style: TextStyle(
-            color: ok ? AppTheme.success : AppTheme.muted,
-            fontWeight: FontWeight.w700,
+            color: ok ? AppTheme.success : AppTheme.text,
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
           ),
+        ),
+        Text(
+          ok ? 'Tous les plis sont saisis' : _remainingLabel(total),
+          style: const TextStyle(color: AppTheme.muted, fontSize: 13),
         ),
         const SizedBox(height: 8),
         ClipRRect(
@@ -97,12 +98,26 @@ class TricksPhase extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 12),
-        for (final p in game.players) ...[
-          _TrickCard(ctrl: ctrl, game: game, player: p),
-          const SizedBox(height: 10),
+        for (var i = 0; i < game.players.length; i++) ...[
+          _TrickCard(
+            ctrl: ctrl,
+            game: game,
+            player: game.players[i],
+            index: i,
+          ),
+          const SizedBox(height: 8),
         ],
       ],
     );
+  }
+
+  String _remainingLabel(int total) {
+    final n = (game.currentCards - total).abs();
+    final plural = n > 1;
+    final word = total < game.currentCards
+        ? (plural ? 'restants' : 'restant')
+        : 'en trop';
+    return '$n pli${plural ? 's' : ''} $word';
   }
 
   static String _monsterHelp(ExpansionOptions e) {
@@ -127,10 +142,12 @@ class _TrickCard extends StatelessWidget {
   final GameController ctrl;
   final GameState game;
   final Player player;
+  final int index;
   const _TrickCard({
     required this.ctrl,
     required this.game,
     required this.player,
+    required this.index,
   });
 
   @override
@@ -156,25 +173,45 @@ class _TrickCard extends StatelessWidget {
     final sign = preview.bidScore >= 0 ? '+' : '';
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
           children: [
-            Text(player.name,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            const SizedBox(height: 2),
-            Text(
-              'Mise $bid · $label · mise $sign${preview.bidScore}',
-              style: const TextStyle(color: AppTheme.muted, fontSize: 13),
+            PlayerFace(name: player.name, index: index),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(player.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text(
+                    'Mise $bid · $label',
+                    style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
             BigCounter(
               id: 'tricks-${player.id}',
               value: tricks,
               min: 0,
               max: game.currentCards,
-              showChips: true,
+              inline: true,
               onChanged: (v) => ctrl.setTricks(player.id, v),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 52,
+              child: Text(
+                '$sign${preview.bidScore}',
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                  color: preview.bidScore >= 0 ? AppTheme.success : AppTheme.danger,
+                ),
+              ),
             ),
           ],
         ),

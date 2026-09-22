@@ -1,15 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../scoring/scoring_engine.dart';
 import '../services/game_controller.dart';
+import '../stats/career_stats.dart';
 import '../theme/app_theme.dart';
 import 'history_screen.dart';
 import 'play_screen.dart';
 import 'rules_screen.dart';
 import 'setup_screen.dart';
+import 'stats_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  CareerSnapshot _snap = CareerSnapshot.empty;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _load();
+  }
+
+  Future<void> _load() async {
+    final storage = context.read<GameController>().storage;
+    final history = await storage.loadHistory();
+    if (!mounted) return;
+    setState(() => _snap = buildCareer(history));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,32 +51,36 @@ class HomeScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             children: [
-              const SizedBox(height: 12),
-              const _Emblem(),
-              const SizedBox(height: 16),
-              const Text(
-                'Skull King',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.4,
-                  color: AppTheme.text,
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Skull King',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    key: const Key('home-rules'),
+                    tooltip: 'Règles / Aide',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RulesScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.menu_book_outlined),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
               const Text(
                 'Compte-points · non officiel',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.muted, fontSize: 15),
+                style: TextStyle(color: AppTheme.muted),
               ),
-              const SizedBox(height: 28),
-              if (hasActive) ...[
-                _ResumeCard(ctrl: ctrl),
-                const SizedBox(height: 14),
-              ],
+              const SizedBox(height: 16),
               ElevatedButton.icon(
                 key: const Key('home-new'),
                 onPressed: () {
@@ -63,130 +91,148 @@ class HomeScreen extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 label: const Text('Nouvelle partie'),
               ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                key: const Key('home-history'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const HistoryScreen()),
-                  );
-                },
-                icon: const Icon(Icons.history),
-                label: const Text('Historique'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                key: const Key('home-rules'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const RulesScreen()),
-                  );
-                },
-                icon: const Icon(Icons.menu_book_outlined),
-                label: const Text('Règles / Aide'),
-              ),
-              const SizedBox(height: 28),
+              if (hasActive) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PlayScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(
+                    'Reprendre · manche ${ctrl.game!.currentRoundIndex + 1}/${ctrl.game!.roundSequence.length}',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
               const Text(
-                'Règles Halcyon 2022, Rascal et extensions en saisie de score.\n'
+                'Tableau de bord',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Parties jouées',
+                      value: '${_snap.games}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Joueurs',
+                      value: '${_snap.uniquePlayers}',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Dernier vainqueur',
+                      value: _snap.recentWinner ?? '—',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Joueurs / partie',
+                      value: _snap.games == 0
+                          ? '—'
+                          : _snap.avgPlayers.toStringAsFixed(1),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _StatCard(
+                label: 'Meilleur score',
+                value: _snap.highestName == null
+                    ? '—'
+                    : '${_snap.highestScore} · ${_snap.highestName}',
+              ),
+              const SizedBox(height: 16),
+              const Text(
                 'Par défaut, les bonus comptent même si la mise est ratée.\n'
                 'Aucune affiliation avec ScoreNow ou Grandpa Beck\'s Games.',
-                textAlign: TextAlign.center,
                 style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Emblem extends StatelessWidget {
-  const _Emblem();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 96,
-        height: 96,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppTheme.surface,
-          border: Border.all(color: AppTheme.accent, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.accent.withValues(alpha: 0.25),
-              blurRadius: 24,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: const Icon(Icons.anchor, size: 48, color: AppTheme.accent),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        onDestinationSelected: (i) => _nav(context, ctrl, hasActive, i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.anchor_outlined),
+            selectedIcon: Icon(Icons.anchor),
+            label: 'Accueil',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.play_circle_outline),
+            selectedIcon: Icon(Icons.play_circle),
+            label: 'Partie',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history),
+            label: 'Historique',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: 'Stats',
+          ),
+        ],
       ),
     );
   }
+
+  void _nav(BuildContext context, GameController ctrl, bool hasActive, int i) {
+    switch (i) {
+      case 1:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                hasActive ? const PlayScreen() : const SetupScreen(),
+          ),
+        );
+      case 2:
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const HistoryScreen()),
+        );
+      case 3:
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const StatsScreen()),
+        );
+    }
+  }
 }
 
-class _ResumeCard extends StatelessWidget {
-  final GameController ctrl;
-  const _ResumeCard({required this.ctrl});
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatCard({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    final g = ctrl.game!;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Partie en cours · manche ${g.currentRoundIndex + 1}/${g.roundSequence.length}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
+            Text(label,
+                style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
             const SizedBox(height: 4),
             Text(
-              '${g.mode.labelFr} · ${g.players.length} joueurs',
-              style: const TextStyle(color: AppTheme.muted, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PlayScreen()),
-                );
-              },
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('Reprendre'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Abandonner ?'),
-                    content: const Text(
-                      'La partie en cours sera perdue (non archivée).',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Annuler'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Abandonner'),
-                      ),
-                    ],
-                  ),
-                );
-                if (ok == true) await ctrl.abandonGame();
-              },
-              child: const Text(
-                'Abandonner la partie',
-                style: TextStyle(color: AppTheme.danger),
-              ),
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
             ),
           ],
         ),

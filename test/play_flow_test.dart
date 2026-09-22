@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skull_king_scorekeeper/main.dart';
 import 'package:skull_king_scorekeeper/models/game_models.dart';
-import 'package:skull_king_scorekeeper/screens/phases/bonus_phase.dart';
 import 'package:skull_king_scorekeeper/services/storage_service.dart';
 
 class MemoryStorage implements GameStorage {
@@ -91,10 +90,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Pari Rascal'), findsOneWidget);
-    final bonusScroll = find.descendant(
-      of: find.byType(BonusPhase),
-      matching: find.byType(Scrollable),
-    );
+    final bonusScroll = find
+        .descendant(
+          of: find.byKey(const Key('bonus-list')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
     await tester.scrollUntilVisible(
       find.text('Alliances Butin'),
       400,

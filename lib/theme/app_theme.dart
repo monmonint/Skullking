@@ -122,6 +122,17 @@ class AppTheme {
         textColor: text,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(color: accent),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        indicatorColor: accent.withValues(alpha: 0.22),
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(color: selected ? accent : muted);
+        }),
+      ),
     );
     return base;
   }

@@ -33,7 +33,7 @@ Bandeau de classement, puis les étapes :
 
 **Enchères → Plis → Harry (si activé) → Bonus → Scores**
 
-On peut revenir aux étapes précédentes tant que la manche n’est pas calculée. Gros boutons − / + pour les mises et les plis.
+On peut revenir aux étapes précédentes tant que la manche n’est pas calculée. Boutons ronds − / + pour les mises, les plis et les bonus. Les pastilles en haut de l’écran Bonus choisissent le joueur. L’onglet Stats reprend les parties archivées.
 
 ## Score
 

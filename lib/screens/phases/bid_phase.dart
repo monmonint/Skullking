@@ -3,6 +3,7 @@ import '../../models/game_models.dart';
 import '../../services/game_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/big_counter.dart';
+import '../../widgets/player_face.dart';
 
 class BidPhase extends StatelessWidget {
   final GameController ctrl;
@@ -19,9 +20,15 @@ class BidPhase extends StatelessWidget {
           style: TextStyle(color: AppTheme.muted),
         ),
         const SizedBox(height: 10),
-        for (final p in game.players) ...[
-          _BidCard(ctrl: ctrl, game: game, playerId: p.id, name: p.name),
-          const SizedBox(height: 10),
+        for (var i = 0; i < game.players.length; i++) ...[
+          _BidCard(
+            ctrl: ctrl,
+            game: game,
+            playerId: game.players[i].id,
+            name: game.players[i].name,
+            index: i,
+          ),
+          const SizedBox(height: 8),
         ],
       ],
     );
@@ -33,12 +40,14 @@ class _BidCard extends StatelessWidget {
   final GameState game;
   final String playerId;
   final String name;
+  final int index;
 
   const _BidCard({
     required this.ctrl,
     required this.game,
     required this.playerId,
     required this.name,
+    required this.index,
   });
 
   @override
@@ -47,24 +56,38 @@ class _BidCard extends StatelessWidget {
     final shot = game.pendingCannonball[playerId] ?? false;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            const SizedBox(height: 4),
-            Text(
-              'Enchère',
-              style: const TextStyle(color: AppTheme.muted, fontSize: 12),
-            ),
-            const SizedBox(height: 6),
-            BigCounter(
-              id: 'bid-$playerId',
-              value: bid,
-              min: 0,
-              max: game.currentCards,
-              showChips: true,
-              onChanged: (v) => ctrl.setBid(playerId, v),
+            Row(
+              children: [
+                PlayerFace(name: name, index: index),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 16)),
+                      Text(
+                        'Mise $bid',
+                        style: const TextStyle(
+                            color: AppTheme.muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                BigCounter(
+                  id: 'bid-$playerId',
+                  value: bid,
+                  min: 0,
+                  max: game.currentCards,
+                  inline: true,
+                  onChanged: (v) => ctrl.setBid(playerId, v),
+                ),
+              ],
             ),
             if (game.cannonballAllowed) ...[
               const SizedBox(height: 10),
