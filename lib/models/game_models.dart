@@ -25,6 +25,9 @@ class PlayerRoundResult {
   final int harryDelta;
   final bool cannonball;
 
+  /// Mise annoncée avant Harry. Null sur les parties enregistrées avant 1.2.
+  final int? declaredBid;
+
   const PlayerRoundResult({
     required this.playerId,
     required this.bid,
@@ -37,6 +40,7 @@ class PlayerRoundResult {
     required this.total,
     this.harryDelta = 0,
     this.cannonball = false,
+    this.declaredBid,
   });
 
   Map<String, dynamic> toJson() => {
@@ -51,6 +55,7 @@ class PlayerRoundResult {
         'total': total,
         'harryDelta': harryDelta,
         'cannonball': cannonball,
+        if (declaredBid != null) 'declaredBid': declaredBid,
       };
 
   factory PlayerRoundResult.fromJson(Map<String, dynamic> j) =>
@@ -68,6 +73,7 @@ class PlayerRoundResult {
         total: j['total'] as int,
         harryDelta: j['harryDelta'] as int? ?? 0,
         cannonball: j['cannonball'] as bool? ?? false,
+        declaredBid: j['declaredBid'] as int?,
       );
 }
 
@@ -77,6 +83,7 @@ class RoundRecord {
   final int voidedTricks;
   final int ghostTricks;
   final List<PlayerRoundResult> results;
+  final List<LootAlliance> lootAlliances;
 
   const RoundRecord({
     required this.index,
@@ -84,6 +91,7 @@ class RoundRecord {
     this.voidedTricks = 0,
     this.ghostTricks = 0,
     required this.results,
+    this.lootAlliances = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -92,6 +100,7 @@ class RoundRecord {
         'voidedTricks': voidedTricks,
         'ghostTricks': ghostTricks,
         'results': results.map((r) => r.toJson()).toList(),
+        'lootAlliances': lootAlliances.map((a) => a.toJson()).toList(),
       };
 
   factory RoundRecord.fromJson(Map<String, dynamic> j) => RoundRecord(
@@ -102,6 +111,10 @@ class RoundRecord {
         results: (j['results'] as List)
             .map((e) =>
                 PlayerRoundResult.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        lootAlliances: (j['lootAlliances'] as List? ?? [])
+            .map((e) =>
+                LootAlliance.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
       );
 }
@@ -133,6 +146,9 @@ class GameState {
   List<LootAlliance> pendingLootAlliances;
   int pendingVoidedTricks;
   int pendingGhostTricks;
+
+  /// Index dans [completedRounds] en cours de correction. Non persisté.
+  int? editingCompletedIndex;
 
   GameState({
     required this.id,
@@ -170,7 +186,17 @@ class GameState {
 
   bool get isFinished => currentRoundIndex >= roundSequence.length;
 
-  int get currentCards => isFinished ? 0 : roundSequence[currentRoundIndex];
+  bool get isEditingRound => editingCompletedIndex != null;
+
+  /// Cartes de la manche saisie : la manche corrigée, sinon la manche en cours.
+  int get currentCards {
+    final edit = editingCompletedIndex;
+    if (edit != null && edit >= 0 && edit < completedRounds.length) {
+      return completedRounds[edit].cards;
+    }
+    if (isFinished) return 0;
+    return roundSequence[currentRoundIndex];
+  }
 
   bool get hasBonusStep =>
       bonusesEnabled ||
@@ -271,5 +297,64 @@ class GameState {
                 RoundRecord.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
         currentRoundIndex: j['currentRoundIndex'] as int? ?? 0,
+      );
+}
+
+/// Réglages repris pour la partie suivante (noms, mode, extensions).
+class GameSetupDefaults {
+  final List<String> playerNames;
+  final GameMode mode;
+  final List<int> customSequence;
+  final bool bonusesEnabled;
+  final bool classicBonusGate;
+  final ScoringSystem scoring;
+  final bool cannonballAllowed;
+  final ExpansionOptions expansions;
+
+  const GameSetupDefaults({
+    required this.playerNames,
+    required this.mode,
+    required this.customSequence,
+    required this.bonusesEnabled,
+    required this.classicBonusGate,
+    required this.scoring,
+    required this.cannonballAllowed,
+    required this.expansions,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'playerNames': playerNames,
+        'mode': mode.name,
+        'customSequence': customSequence,
+        'bonusesEnabled': bonusesEnabled,
+        'classicBonusGate': classicBonusGate,
+        'scoring': scoring.name,
+        'cannonballAllowed': cannonballAllowed,
+        'expansions': expansions.toJson(),
+      };
+
+  factory GameSetupDefaults.fromJson(Map<String, dynamic> j) =>
+      GameSetupDefaults(
+        playerNames: (j['playerNames'] as List? ?? [])
+            .map((e) => e as String)
+            .toList(),
+        mode: GameMode.values.firstWhere(
+          (m) => m.name == j['mode'],
+          orElse: () => GameMode.standard,
+        ),
+        customSequence:
+            (j['customSequence'] as List? ?? []).map((e) => e as int).toList(),
+        bonusesEnabled: j['bonusesEnabled'] as bool? ?? true,
+        classicBonusGate: j['classicBonusGate'] as bool? ?? false,
+        scoring: ScoringSystem.values.firstWhere(
+          (s) => s.name == j['scoring'],
+          orElse: () => ScoringSystem.skullKing,
+        ),
+        cannonballAllowed: j['cannonballAllowed'] as bool? ?? false,
+        expansions: ExpansionOptions.fromJson(
+          j['expansions'] == null
+              ? null
+              : Map<String, dynamic>.from(j['expansions'] as Map),
+        ),
       );
 }

@@ -81,14 +81,17 @@ class SummaryScreen extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('Détail par manche',
               style: TextStyle(fontWeight: FontWeight.w800)),
-          ...g.completedRounds.map((r) {
+          ...g.completedRounds.asMap().entries.map((entry) {
+            final i = entry.key;
+            final r = entry.value;
             return ExpansionTile(
               tilePadding: EdgeInsets.zero,
               title: Text(
                 'Manche ${r.index + 1} · ${r.cards} carte${r.cards > 1 ? 's' : ''}'
                 '${r.voidedTricks > 0 ? ' · ${r.voidedTricks} annulés' : ''}',
               ),
-              children: r.results.map((pr) {
+              children: [
+                ...r.results.map((pr) {
                 final name = g.nameOf(pr.playerId) ?? pr.playerId;
                 final bonus = pr.bonusScore == 0
                     ? ''
@@ -106,7 +109,25 @@ class SummaryScreen extends StatelessWidget {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: Key('edit-round-$i'),
+                    onPressed: () {
+                      ctrl.beginEditRound(i);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const PlayScreen(closeWhenEditEnds: true),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Modifier cette manche'),
+                  ),
+                ),
+              ],
             );
           }),
           const SizedBox(height: 16),

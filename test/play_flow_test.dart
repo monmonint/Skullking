@@ -34,6 +34,16 @@ class MemoryStorage implements GameStorage {
   Future<void> saveLastPlayerNames(List<String> value) async {
     names = List<String>.from(value);
   }
+
+  GameSetupDefaults? defaults;
+
+  @override
+  Future<GameSetupDefaults?> loadSetupDefaults() async => defaults;
+
+  @override
+  Future<void> saveSetupDefaults(GameSetupDefaults value) async {
+    defaults = value;
+  }
 }
 
 void main() {

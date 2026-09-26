@@ -4,7 +4,8 @@ import '../../theme/app_theme.dart';
 
 class ReviewPhase extends StatelessWidget {
   final GameState game;
-  const ReviewPhase({super.key, required this.game});
+  final ValueChanged<int>? onEdit;
+  const ReviewPhase({super.key, required this.game, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +34,39 @@ class ReviewPhase extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
         const SizedBox(height: 4),
         for (var i = 0; i < ranked.length; i++) _rankTile(ranked[i], i),
+        const SizedBox(height: 8),
+        const Text('Toutes les manches',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        const SizedBox(height: 4),
+        const Text(
+          'Touchez une manche pour corriger enchères, plis et bonus. '
+          'Le classement est recalculé.',
+          style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.35),
+        ),
+        for (var i = 0; i < game.completedRounds.length; i++)
+          _roundTile(game.completedRounds[i], i),
       ],
+    );
+  }
+
+  Widget _roundTile(RoundRecord round, int index) {
+    final line = round.results.map((r) {
+      final name = game.nameOf(r.playerId) ?? r.playerId;
+      final sign = r.total >= 0 ? '+' : '';
+      return '$name $sign${r.total}';
+    }).join(' · ');
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      child: ListTile(
+        key: Key('edit-round-$index'),
+        title: Text(
+          'Manche ${round.index + 1} · ${round.cards} carte${round.cards > 1 ? 's' : ''}',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(line),
+        trailing: const Icon(Icons.edit_outlined, color: AppTheme.accent),
+        onTap: onEdit == null ? null : () => onEdit!(index),
+      ),
     );
   }
 

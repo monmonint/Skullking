@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/game_models.dart';
 import '../scoring/scoring_engine.dart';
 import '../services/game_controller.dart';
 import '../theme/app_theme.dart';
@@ -40,19 +41,44 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Future<void> _loadLast() async {
     final storage = context.read<GameController>().storage;
-    final last = await storage.loadLastPlayerNames();
+    final defaults = await storage.loadSetupDefaults();
     if (!mounted) return;
-    if (last.isNotEmpty) {
-      _count = last.length.clamp(2, 8);
-      for (var i = 0; i < last.length && i < 8; i++) {
-        _names[i].text = last[i];
-      }
+    if (defaults != null && defaults.playerNames.isNotEmpty) {
+      _applyDefaults(defaults);
     } else {
-      for (var i = 0; i < 8; i++) {
-        _names[i].text = 'Joueur ${i + 1}';
+      final last = await storage.loadLastPlayerNames();
+      if (!mounted) return;
+      if (last.isNotEmpty) {
+        _count = last.length.clamp(2, 8);
+        for (var i = 0; i < last.length && i < 8; i++) {
+          _names[i].text = last[i];
+        }
+      } else {
+        for (var i = 0; i < 8; i++) {
+          _names[i].text = 'Joueur ${i + 1}';
+        }
       }
     }
     setState(() => _loading = false);
+  }
+
+  void _applyDefaults(GameSetupDefaults defaults) {
+    _count = defaults.playerNames.length.clamp(2, 8);
+    for (var i = 0; i < 8; i++) {
+      _names[i].text = i < defaults.playerNames.length
+          ? defaults.playerNames[i]
+          : 'Joueur ${i + 1}';
+    }
+    _mode = defaults.mode;
+    _bonuses = defaults.bonusesEnabled;
+    _classicGate = defaults.classicBonusGate;
+    _scoring = defaults.scoring;
+    _cannonball = defaults.cannonballAllowed &&
+        defaults.scoring == ScoringSystem.rascal;
+    _exp = defaults.expansions;
+    if (defaults.customSequence.isNotEmpty) {
+      _customCtrl.text = defaults.customSequence.join(',');
+    }
   }
 
   @override
@@ -245,10 +271,14 @@ class _SetupScreenState extends State<SetupScreen> {
                 const Spacer(),
                 TextButton(
                   onPressed: () async {
-                    final last = await context
-                        .read<GameController>()
-                        .storage
-                        .loadLastPlayerNames();
+                    final storage = context.read<GameController>().storage;
+                    final defaults = await storage.loadSetupDefaults();
+                    if (!mounted) return;
+                    if (defaults != null && defaults.playerNames.isNotEmpty) {
+                      setState(() => _applyDefaults(defaults));
+                      return;
+                    }
+                    final last = await storage.loadLastPlayerNames();
                     if (last.isEmpty || !mounted) return;
                     setState(() {
                       _count = last.length.clamp(2, 8);
