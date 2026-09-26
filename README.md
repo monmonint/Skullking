@@ -27,6 +27,8 @@ Le **pari de Rascal le Flambeur** (0 / 10 / 20) reste un pari : +s’il est exac
 - 7 (−5), 8 (+5), Davy Jones (+20 / monstre), Con capturé (+30)
 - Rappels Rosie, Will le Bandit, Juanita Jade (effet de table, pas de points)
 - UI française, hors ligne, historique, revanche, classement en direct
+- Correction d’une manche déjà validée (enchères, plis, bonus) : le classement, les totaux et la partie enregistrée sont recalculés
+- Nouvelle partie : reprend les noms, le mode et les options de la partie précédente
 - Menus : accueil (Nouvelle partie, tableau de bord), barre Accueil / Partie / Historique / Stats, Règles, préparation en 3 étapes, phases Enchères → Plis → Harry → Bonus → Scores avec pastilles joueur et boutons − / + ronds
 
 ## Hors scope

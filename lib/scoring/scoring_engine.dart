@@ -193,6 +193,13 @@ class LootAlliance {
   const LootAlliance({required this.playerA, required this.playerB});
 
   bool involves(String id) => playerA == id || playerB == id;
+
+  Map<String, dynamic> toJson() => {'playerA': playerA, 'playerB': playerB};
+
+  factory LootAlliance.fromJson(Map<String, dynamic> j) => LootAlliance(
+        playerA: j['playerA'] as String,
+        playerB: j['playerB'] as String,
+      );
 }
 
 class ScoringEngine {
@@ -362,6 +369,40 @@ class ScoringEngine {
       throw ArgumentError('Harry delta must be -1, 0 or 1');
     }
     return (bid + delta).clamp(0, roundCards);
+  }
+
+  /// Mise annoncée avant Harry, à partir de la mise effective stockée.
+  /// Si l'ajustement a été borné (0 ou le nombre de cartes), on retient
+  /// l'extrémité. Les parties nouvelles stockent aussi la mise déclarée.
+  static int inferDeclaredBid(int effectiveBid, int harryDelta, int roundCards) {
+    final raw = effectiveBid - harryDelta;
+    if (raw >= 0 && raw <= roundCards) return raw;
+    if (harryDelta > 0) return roundCards;
+    if (harryDelta < 0) return 0;
+    return effectiveBid.clamp(0, roundCards);
+  }
+
+  /// Reconstruit des alliances dont le nombre par joueur correspond aux parts
+  /// déjà marquées (anciennes parties sans la liste des paires).
+  static List<LootAlliance> alliancesFromShareCounts(
+    List<({String playerId, int shares})> shares,
+  ) {
+    final remaining = <String, int>{
+      for (final s in shares)
+        if (s.shares > 0) s.playerId: s.shares,
+    };
+    final out = <LootAlliance>[];
+    while (out.length < 8) {
+      final ids = remaining.keys.where((id) => (remaining[id] ?? 0) > 0).toList()
+        ..sort((a, b) => remaining[b]!.compareTo(remaining[a]!));
+      if (ids.length < 2) break;
+      final a = ids[0];
+      final b = ids[1];
+      out.add(LootAlliance(playerA: a, playerB: b));
+      remaining[a] = remaining[a]! - 1;
+      remaining[b] = remaining[b]! - 1;
+    }
+    return out;
   }
 
   /// Quel monstre prime si plusieurs sont dans le même pli.

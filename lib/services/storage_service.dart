@@ -5,6 +5,8 @@ import '../models/game_models.dart';
 abstract class GameStorage {
   Future<List<String>> loadLastPlayerNames();
   Future<void> saveLastPlayerNames(List<String> names);
+  Future<GameSetupDefaults?> loadSetupDefaults();
+  Future<void> saveSetupDefaults(GameSetupDefaults defaults);
   Future<void> saveActiveGame(GameState game);
   Future<GameState?> loadActiveGame();
   Future<void> clearActiveGame();
@@ -15,6 +17,7 @@ abstract class GameStorage {
 class StorageService implements GameStorage {
   static const _historyKey = 'game_history_v1';
   static const _lastPlayersKey = 'last_players_v1';
+  static const _setupDefaultsKey = 'setup_defaults_v1';
   static const _activeGameKey = 'active_game_v1';
   static const _maxHistory = 30;
 
@@ -28,6 +31,26 @@ class StorageService implements GameStorage {
   Future<void> saveLastPlayerNames(List<String> names) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_lastPlayersKey, names);
+  }
+
+  @override
+  Future<GameSetupDefaults?> loadSetupDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_setupDefaultsKey);
+    if (raw == null) return null;
+    try {
+      return GameSetupDefaults.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> saveSetupDefaults(GameSetupDefaults defaults) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_setupDefaultsKey, jsonEncode(defaults.toJson()));
   }
 
   @override

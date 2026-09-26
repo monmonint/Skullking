@@ -13,8 +13,47 @@ import 'phases/review_phase.dart';
 import 'phases/tricks_phase.dart';
 import 'summary_screen.dart';
 
-class PlayScreen extends StatelessWidget {
-  const PlayScreen({super.key});
+class PlayScreen extends StatefulWidget {
+  /// Ferme cet écran quand la correction de manche se termine (résumé final).
+  final bool closeWhenEditEnds;
+
+  const PlayScreen({super.key, this.closeWhenEditEnds = false});
+
+  @override
+  State<PlayScreen> createState() => _PlayScreenState();
+}
+
+class _PlayScreenState extends State<PlayScreen> {
+  GameController? _ctrl;
+  bool _wasEditing = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ctrl = context.read<GameController>();
+    if (!identical(_ctrl, ctrl)) {
+      _ctrl?.removeListener(_onCtrl);
+      _ctrl = ctrl;
+      _wasEditing = ctrl.isEditingRound;
+      ctrl.addListener(_onCtrl);
+    }
+  }
+
+  void _onCtrl() {
+    final editing = _ctrl?.isEditingRound ?? false;
+    if (widget.closeWhenEditEnds && _wasEditing && !editing && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop();
+      });
+    }
+    _wasEditing = editing;
+  }
+
+  @override
+  void dispose() {
+    _ctrl?.removeListener(_onCtrl);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +66,39 @@ class PlayScreen extends StatelessWidget {
       );
     }
 
-    final cards = g.isFinished ? 0 : g.currentCards;
-    final title = g.isFinished
-        ? 'Fin de partie'
-        : 'Manche ${g.currentRoundIndex + 1}/${g.roundSequence.length}';
-    final subtitle = g.isFinished
-        ? g.mode.labelFr
-        : '$cards carte${cards > 1 ? 's' : ''} · ${g.mode.labelFr}';
+    final editing = g.editingCompletedIndex;
+    final editingRound =
+        editing == null ? null : g.completedRounds[editing];
+    final cards = editingRound != null
+        ? editingRound.cards
+        : (g.isFinished ? 0 : g.currentCards);
+    final title = editingRound != null
+        ? 'Modifier manche ${editingRound.index + 1}'
+        : g.isFinished
+            ? 'Fin de partie'
+            : 'Manche ${g.currentRoundIndex + 1}/${g.roundSequence.length}';
+    final subtitle = editingRound != null
+        ? '$cards carte${cards > 1 ? 's' : ''} · les scores seront recalculés'
+        : g.isFinished
+            ? g.mode.labelFr
+            : '$cards carte${cards > 1 ? 's' : ''} · ${g.mode.labelFr}';
 
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 72,
+        actions: [
+          if (editingRound != null)
+            TextButton(
+              onPressed: ctrl.cancelEdit,
+              child: const Text('Annuler'),
+            )
+          else if (g.completedRounds.isNotEmpty)
+            IconButton(
+              tooltip: 'Manches de la partie',
+              onPressed: () => _showRounds(context, ctrl, g),
+              icon: const Icon(Icons.history),
+            ),
+        ],
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -112,11 +173,12 @@ class PlayScreen extends StatelessWidget {
       case RoundPhase.tricks:
         if (g.expansions.harryTheGiant) return 'Harry le Géant';
         if (g.hasBonusStep) return 'Bonus';
-        return 'Calculer les scores';
+        return g.isEditingRound ? 'Enregistrer la manche' : 'Calculer les scores';
       case RoundPhase.harry:
-        return g.hasBonusStep ? 'Bonus' : 'Calculer les scores';
+        if (g.hasBonusStep) return 'Bonus';
+        return g.isEditingRound ? 'Enregistrer la manche' : 'Calculer les scores';
       case RoundPhase.bonuses:
-        return 'Calculer les scores';
+        return g.isEditingRound ? 'Enregistrer la manche' : 'Calculer les scores';
       case RoundPhase.review:
         return g.isFinished ? 'Résumé final' : 'Manche suivante';
     }
@@ -154,7 +216,57 @@ class PlayScreen extends StatelessWidget {
       case RoundPhase.bonuses:
         return BonusPhase(ctrl: ctrl, game: g);
       case RoundPhase.review:
-        return ReviewPhase(game: g);
+        return ReviewPhase(
+          game: g,
+          onEdit: ctrl.beginEditRound,
+        );
     }
+  }
+
+  void _showRounds(BuildContext context, GameController ctrl, GameState g) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  'Manches de la partie',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
+              ),
+              for (var i = 0; i < g.completedRounds.length; i++)
+                ListTile(
+                  key: Key('edit-round-$i'),
+                  title: Text(
+                    'Manche ${g.completedRounds[i].index + 1} · '
+                    '${g.completedRounds[i].cards} carte'
+                    '${g.completedRounds[i].cards > 1 ? 's' : ''}',
+                  ),
+                  subtitle: Text(_roundLine(g, g.completedRounds[i])),
+                  trailing: const Icon(Icons.edit_outlined),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    ctrl.beginEditRound(i);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _roundLine(GameState g, RoundRecord round) {
+    return round.results.map((r) {
+      final name = g.nameOf(r.playerId) ?? r.playerId;
+      final sign = r.total >= 0 ? '+' : '';
+      return '$name $sign${r.total}';
+    }).join(' · ');
   }
 }

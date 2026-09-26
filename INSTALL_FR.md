@@ -35,6 +35,10 @@ Bandeau de classement, puis les étapes :
 
 On peut revenir aux étapes précédentes tant que la manche n’est pas calculée. Boutons ronds − / + pour les mises, les plis et les bonus. Les pastilles en haut de l’écran Bonus choisissent le joueur. L’onglet Stats reprend les parties archivées.
 
+Après validation, touchez une manche (écran Scores, icône historique, ou résumé final) pour corriger enchères, plis et bonus. Les totaux sont recalculés.
+
+Une nouvelle partie reprend les joueurs, le mode et les cartes spéciales de la précédente. Tout reste modifiable avant de lancer.
+
 ## Score
 
 ### Skull King (classique)
