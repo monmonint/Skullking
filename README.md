@@ -2,7 +2,9 @@
 
 Compte-points Flutter **non officiel** pour Skull King (Halcyon / Grandpa Beck’s 2022, score Rascal, boulet de canon, extensions en saisie). Interface originale — pas d’affiliation avec ScoreNow, Grand Prix Games ou Grandpa Beck’s Games.
 
-Identifiant Android : `fr.remi.skullkingscore`.
+Identifiant Android : `fr.remi.skullkingscore`. Version 1.3.0.
+
+Au lancement, et via **Menu → Rechercher une mise à jour**, l’app compare sa version à `releases/latest` sur GitHub. Si une version plus récente existe, elle propose de télécharger `skull-king-scorekeeper-arm64-release.apk` (arm64) ou `skull-king-scorekeeper-fat-release.apk`. Hors ligne ou si l’API est limitée, elle ne dit rien.
 
 ## Règle de score (important)
 

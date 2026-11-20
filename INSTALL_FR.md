@@ -16,6 +16,8 @@ Aucune affiliation avec ScoreNow, Grand Prix Games ou Grandpa Beck’s Games.
 
 Non destiné au Play Store. Identifiant : `fr.remi.skullkingscore`.
 
+Depuis l’accueil : **Menu → Rechercher une mise à jour**. Si une version plus récente est publiée, **Mettre à jour** télécharge l’APK (arm64 sur un téléphone 64 bits, sinon le multi-ABI) et ouvre l’installateur Android. Autorisez l’installation depuis cette application si le système le demande.
+
 Si les APK ne sont pas dans le dépôt (dossier `artifacts/` ignoré par git), construisez-les avec `./tool/build_apks.sh` — voir le README.
 
 ## Préparer une partie
