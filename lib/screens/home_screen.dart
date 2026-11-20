@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/game_controller.dart';
 import '../stats/career_stats.dart';
 import '../theme/app_theme.dart';
+import '../update/update_prompt.dart';
 import 'history_screen.dart';
 import 'play_screen.dart';
 import 'rules_screen.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   CareerSnapshot _snap = CareerSnapshot.empty;
   bool _started = false;
+  bool _updateChecked = false;
 
   @override
   void didChangeDependencies() {
@@ -26,6 +28,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_started) return;
     _started = true;
     _load();
+    if (UpdateLaunch.enabledOf(context) && !_updateChecked) {
+      _updateChecked = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        checkForAppUpdate(context, manual: false);
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -73,6 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                     icon: const Icon(Icons.menu_book_outlined),
+                  ),
+                  PopupMenuButton<String>(
+                    key: const Key('home-menu'),
+                    tooltip: 'Menu',
+                    onSelected: (value) {
+                      if (value == 'update') {
+                        checkForAppUpdate(context, manual: true);
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'update',
+                        child: Text('Rechercher une mise à jour'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -159,7 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const Text(
                 'Par défaut, les bonus comptent même si la mise est ratée.\n'
                 'Aucune affiliation avec ScoreNow ou Grandpa Beck\'s Games.',
-                style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4),
+                style: TextStyle(
+                  color: AppTheme.muted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -179,10 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon: Icon(Icons.play_circle),
             label: 'Partie',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.history),
-            label: 'Historique',
-          ),
+          NavigationDestination(icon: Icon(Icons.history), label: 'Historique'),
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights),
@@ -203,13 +228,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       case 2:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const HistoryScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const HistoryScreen()));
       case 3:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const StatsScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const StatsScreen()));
     }
   }
 }
@@ -227,8 +252,10 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+            Text(
+              label,
+              style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+            ),
             const SizedBox(height: 4),
             Text(
               value,
